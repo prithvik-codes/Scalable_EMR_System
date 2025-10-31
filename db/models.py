@@ -40,3 +40,11 @@ class MedicalRecord(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     patient = relationship("Patient", back_populates="records")
+
+class Doctor(Base):
+    __tablename__ = "doctors"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String)
+    specialization = Column(String)
+    username = Column(String, unique=True)
+    password = Column(String)
