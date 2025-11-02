@@ -59,9 +59,8 @@ with colB:
         stop_simulation()
         st.rerun()
 
-# Refresh button
-st.sidebar.markdown("**Refresh UI**")
-if st.sidebar.button("Refresh"):
+# Refresh UI
+if st.sidebar.button("Refresh UI"):
     st.rerun()
 
 # Helpers
@@ -101,7 +100,6 @@ def global_metrics():
         return dict(patients=total_patients, vitals=total_vitals, records=total_records, alerts=alerts)
     finally: s.close()
 
-# ✅ Load Prescriptions
 @st.cache_data(ttl=5)
 def load_prescriptions(pid):
     s = SessionLocal()
@@ -115,7 +113,6 @@ def load_prescriptions(pid):
         return recs
     finally:
         s.close()
-
 
 # ---------------- DASHBOARD ----------------
 if page == "Dashboard":
@@ -143,40 +140,101 @@ if page == "Dashboard":
             c3.metric("Temp", latest["temperature"])
             c4.metric("O2", latest["oxygen"])
 
-            # ✅ Added Prescriptions tab here
             tabs = st.tabs(["HR", "BP", "Temp", "Oxygen", "Table", "Prescriptions"])
 
+            # ✅ HEART RATE
             with tabs[0]:
+                df = df.sort_values("time")
                 f = go.Figure()
-                f.add_trace(go.Scatter(x=df.time, y=df.heart_rate, mode="lines+markers"))
+                f.add_trace(go.Scatter(
+                    x=df.time, y=df.heart_rate,
+                    mode="lines+markers",
+                    line=dict(color="#e63946", width=2),
+                    marker=dict(size=6),
+                    name="Heart Rate (bpm)"
+                ))
+                f.update_layout(
+                    title="Heart Rate Trend",
+                    xaxis_title="Time",
+                    yaxis_title="Heart Rate (bpm)",
+                    template="plotly_dark",
+                    hovermode="x unified"
+                )
                 st.plotly_chart(f, use_container_width=True)
 
+            # ✅ BLOOD PRESSURE
             with tabs[1]:
+                df = df.sort_values("time")
                 f = go.Figure()
-                f.add_trace(go.Scatter(x=df.time, y=df.systolic, name="Systolic"))
-                f.add_trace(go.Scatter(x=df.time, y=df.diastolic, name="Diastolic"))
+                f.add_trace(go.Scatter(
+                    x=df.time, y=df.systolic,
+                    mode="lines+markers",
+                    line=dict(color="#1d77ff", width=2),
+                    marker=dict(size=6),
+                    name="Systolic"
+                ))
+                f.add_trace(go.Scatter(
+                    x=df.time, y=df.diastolic,
+                    mode="lines+markers",
+                    line=dict(color="#2a9d8f", width=2),
+                    marker=dict(size=6),
+                    name="Diastolic"
+                ))
+                f.update_layout(
+                    title="Blood Pressure Trend",
+                    xaxis_title="Time",
+                    yaxis_title="BP (mmHg)",
+                    template="plotly_dark",
+                    hovermode="x unified"
+                )
                 st.plotly_chart(f, use_container_width=True)
 
+            # ✅ TEMPERATURE
             with tabs[2]:
+                df = df.sort_values("time")
                 f = go.Figure()
-                f.add_trace(go.Scatter(x=df.time, y=df.temperature, mode="lines+markers"))
+                f.add_trace(go.Scatter(
+                    x=df.time, y=df.temperature,
+                    mode="lines+markers",
+                    line=dict(color="#f4a261", width=2),
+                    marker=dict(size=6),
+                    name="Temperature (°C)"
+                ))
+                f.update_layout(
+                    title="Temperature Trend",
+                    xaxis_title="Time",
+                    yaxis_title="Temp (°C)",
+                    template="plotly_dark",
+                    hovermode="x unified"
+                )
                 st.plotly_chart(f, use_container_width=True)
 
+            # ✅ OXYGEN
             with tabs[3]:
                 df = df.sort_values("time")
                 f = go.Figure()
-                f.add_trace(go.Scatter(x=df.time, y=df.oxygen, mode="lines+markers"))
+                f.add_trace(go.Scatter(
+                    x=df.time, y=df.oxygen,
+                    mode="lines+markers",
+                    line=dict(color="#2a9d8f", width=2),
+                    marker=dict(size=6),
+                    name="Oxygen (%)"
+                ))
+                f.update_layout(
+                    title="Oxygen Level Trend",
+                    xaxis_title="Time",
+                    yaxis_title="SpO₂ (%)",
+                    template="plotly_dark",
+                    hovermode="x unified"
+                )
                 st.plotly_chart(f, use_container_width=True)
 
             with tabs[4]:
                 st.dataframe(df.tail(25))
 
-            # ✅ Prescription History Tab
             with tabs[5]:
-                st.subheader(f"🩺 Prescription Records for {sel}")
-
+                st.subheader(f"🩺 Prescription History for {sel}")
                 recs = load_prescriptions(pid)
-
                 if not recs:
                     st.info("No prescriptions recorded yet.")
                 else:
@@ -185,70 +243,14 @@ if page == "Dashboard":
 **👨‍⚕️ Doctor:** {r.doctor}  
 **📅 Date:** {r.created_at.strftime('%Y-%m-%d %H:%M')}  
 **📌 Diagnosis:** {r.diagnosis}  
-💊 Prescription: {r.prescription}""")
+💊 Prescription: {r.prescription}
+                        """)
 
-# # ---------------- DASHBOARD ----------------
-# if page == "Dashboard":
-#     metrics = global_metrics()
-#     c1,c2,c3,c4 = st.columns(4)
-#     c1.metric("Patients", metrics["patients"])
-#     c2.metric("Vitals", metrics["vitals"])
-#     c3.metric("Reports", metrics["records"])
-#     c4.metric("Simulation", "Running ✅" if is_running() else "Stopped ❌")
-
-#     patients = load_patients()
-#     pmap = {p.name:p.id for p in patients}
-#     sel = st.selectbox("Select Patient", ["-- Select --"] + list(pmap.keys()))
-
-#     if sel != "-- Select --":
-#         pid = pmap[sel]
-#         df = load_vitals_for_patient(pid, 300)
-#         if df.empty:
-#             st.warning("No vitals recorded yet")
-#         else:
-#             latest = df.iloc[-1]
-#             c1,c2,c3,c4 = st.columns(4)
-#             c1.metric("Heart Rate", latest["heart_rate"])
-#             c2.metric("BP", f"{latest['systolic']}/{latest['diastolic']}")
-#             c3.metric("Temp", latest["temperature"])
-#             c4.metric("O2", latest["oxygen"])
-
-#             tabs = st.tabs(["HR", "BP", "Temp", "Oxygen", "Table"])
-#             # Heart rate
-#             with tabs[0]:
-#                 f = go.Figure()
-#                 f.add_trace(go.Scatter(x=df.time, y=df.heart_rate, mode="lines+markers"))
-#                 st.plotly_chart(f, use_container_width=True)
-
-#             # BP
-#             with tabs[1]:
-#                 f = go.Figure()
-#                 f.add_trace(go.Scatter(x=df.time, y=df.systolic, name="Systolic"))
-#                 f.add_trace(go.Scatter(x=df.time, y=df.diastolic, name="Diastolic"))
-#                 st.plotly_chart(f, use_container_width=True)
-
-#             # Temperature
-#             with tabs[2]:
-#                 f = go.Figure()
-#                 f.add_trace(go.Scatter(x=df.time, y=df.temperature, mode="lines+markers"))
-#                 st.plotly_chart(f, use_container_width=True)
-
-#             # Oxygen
-#             with tabs[3]:
-#                 df = df.sort_values("time")
-#                 f = go.Figure()
-#                 f.add_trace(go.Scatter(x=df.time, y=df.oxygen, mode="lines+markers"))
-#                 st.plotly_chart(f, use_container_width=True)
-
-#             with tabs[4]:
-#                 st.dataframe(df.tail(25))
-
-#     st.subheader("Recent Alerts")
-#     for v,p in metrics["alerts"]:
-#         st.write(f"**{p.name}** — HR={v.heart_rate}, BP={v.systolic}/{v.diastolic}, Temp={v.temperature}, O₂={v.oxygen}")
+    st.subheader("Recent Alerts")
+    for v,p in metrics["alerts"]:
+        st.write(f"**{p.name}** — HR={v.heart_rate}, BP={v.systolic}/{v.diastolic}, Temp={v.temperature}, O₂={v.oxygen}")
 
 # ---------------- ANALYTICS ----------------
-
 elif page == "Analytics":
     st.header("\n📊 Analytics & Insights\n")
     session = SessionLocal()
@@ -273,14 +275,10 @@ elif page == "Analytics":
     finally:
         session.close()
 
-
-# ---------------- DOCTOR PORTAL ----------------elif page == "Doctor Portal":
+# ---------------- DOCTOR PORTAL ----------------
 elif page == "Doctor Portal":
     st.header("👨‍⚕️ Doctor Portal")
-
-    # ---- Doctor List Handling ----
     if "doctor_list" not in st.session_state:
-        # Load existing doctors from medical records
         s = SessionLocal()
         try:
             docs = s.query(MedicalRecord.doctor).distinct().all()
@@ -289,7 +287,6 @@ elif page == "Doctor Portal":
             s.close()
 
     st.subheader("Add / Select Doctor")
-
     new_doc = st.text_input("Add New Doctor Name")
 
     if st.button("Add Doctor"):
@@ -300,15 +297,12 @@ elif page == "Doctor Portal":
             st.warning("Doctor already exists or name empty")
 
     doc = st.selectbox("Select Doctor", ["-- Select --"] + st.session_state.doctor_list)
-
     if doc == "-- Select --":
         st.stop()
 
-    # ---- Select Patient ----
     patients = load_patients()
     pmap = {p.name: p.id for p in patients}
     pat = st.selectbox("Select Patient", list(pmap.keys()))
-
     diagnosis = st.text_input("Diagnosis")
     notes = st.text_area("Prescription / Notes")
 
@@ -328,7 +322,6 @@ elif page == "Doctor Portal":
         finally:
             s.close()
 
-    # ---- History ----
     st.subheader(f"📋 Prescription History — Dr. {doc}")
     s = SessionLocal()
     recs = s.query(MedicalRecord).filter(MedicalRecord.doctor == doc).order_by(desc(MedicalRecord.created_at)).all()
@@ -337,12 +330,9 @@ elif page == "Doctor Portal":
         st.write(f"**Patient:** {p.name}  \n**Date:** {r.created_at}  \n**Diagnosis:** {r.diagnosis}  \n**Rx:** {r.prescription}  \n---")
     s.close()
 
-
-
 # ---------------- ADMIN PANEL ----------------
 elif page == "Admin Panel":
     st.header("Admin Panel")
-
     if st.button("Seed Sample Patients"):
         seed_patients_if_needed()
         st.success("Seeded sample patients")
